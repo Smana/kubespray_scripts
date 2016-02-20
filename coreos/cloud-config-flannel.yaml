@@ -1,0 +1,28 @@
+#cloud-config
+
+coreos:
+  units:
+    - name: format_binaries_disk.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats kubernetes binaries disk
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/sbin/wipefs -f /dev/disk/by-id/scsi-0Google_PersistentDisk_binaries
+        ExecStart=/usr/sbin/mkfs.ext4 -F /dev/disk/by-id/scsi-0Google_PersistentDisk_binaries
+    - name: opt-bin.mount
+      command: start
+      content: |
+        [Mount]
+        What=/dev/disk/by-id/scsi-0Google_PersistentDisk_binaries
+        Where=/opt/bin
+        Type=ext4
+    - name: flanneld.service
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "10.233.0.0/16" }'
+      command: start
